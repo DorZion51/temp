@@ -83,7 +83,7 @@ function retTreatment(ret) {
     }
     else{
         let show=checkTheOthers(ret.argument);
-        lines[ret.loc.start.line-1]=lines[ret.loc.start.line-1].slice(0,ret.argument.loc.start.column)+show.replace(/\s+/g, '')+'{';
+        lines[ret.loc.start.line-1]=lines[ret.loc.start.line-1].slice(0,ret.argument.loc.start.column)+'('+show+')'+'{';
     }
 }
 
@@ -103,20 +103,26 @@ function checkTheOthers(exp) {
 }
 
 function ifTreatment(ifstat) {
-    consequentTreatment(ifstat.consequent);
-    let t=testTreatment(ifstat.test);
-    
-
-    if(evaluation(t)){
-        lines[ifstat.loc.start.line-1]='@'+lines[ifstat.loc.start.line-1].slice(0,ifstat.test.loc.start.column-1)+t.replace(/\s+/g, '')+'{';
+    let t='';
+    if(ifstat.test.type=='Literal'){
+        t= ifstat.test.value;
     }
     else{
-        lines[ifstat.loc.start.line-1]='!'+lines[ifstat.loc.start.line-1].slice(0,ifstat.test.loc.start.column-1)+t.replace(/\s+/g, '')+'{';
+        t=testTreatment(ifstat.test);
+    }
+    consequentTreatment(ifstat.consequent);
+    if(evaluation(t)){
+        lines[ifstat.loc.start.line-1]='@'+lines[ifstat.loc.start.line-1].slice(0,ifstat.test.loc.start.column-1)+'('+t+')'+'{';
+    }
+    else{
+        lines[ifstat.loc.start.line-1]='!'+lines[ifstat.loc.start.line-1].slice(0,ifstat.test.loc.start.column-1)+'('+t+')'+'{';
     }
     if(ifstat.alternate!=null){
         statTreatment(ifstat.alternate);
     }
 }
+
+
 
 function consequentTreatment(cons) {
     if(cons.type=='BlockStatement'){
@@ -129,9 +135,15 @@ function testTreatment(test) {
 }
 
 function whlieTreatment(whil) {
+    let show='';
+    if(whil.test.type=='Literal'){
+        show= whil.test.value;
+    }
+    else{
+        show=testTreatment(whil.test);
+    }
     consequentTreatment(whil.body);
-    let show=testTreatment(whil.test);
-    lines[whil.loc.start.line-1]=lines[whil.loc.start.line-1].slice(0,whil.test.loc.start.column-1)+show.replace(/\s+/g, '')+'{';
+    lines[whil.loc.start.line-1]=lines[whil.loc.start.line-1].slice(0,whil.test.loc.start.column-1)+'('+show+')'+'{';
 }
 
 function blockStatTreatment(block) {
@@ -264,14 +276,21 @@ function assExpTreatment(vard) {
     }
     if(vard.right.type=='Literal'){
         right=vard.right.value;
-        ass.set(left,right);
-    }
+        ass.set(left,right);}
     else if(vard.right.type=='ArrayExpression'){
         arrayExpAssTreament(left,vard.right);
     }
     else{
         right=checkTheOthers(vard.right);
-        ass.set(left,right);
+        ass.set(left,right);}
+}
+
+function savePrev(prev) {
+    if(ass.has(prev)){
+        assprev.set(ass.get(prev));
+    }
+    else{
+        assprev.set(locals.get(prev));
     }
 }
 
